@@ -171,7 +171,7 @@ namespace _Project.Ray_Caster.Scripts
             if (octreeManager != null)
             {
                 emptySpaceSkip = octreeManager.GetEmptySpaceSkip();
-                octreeManager.ClearSamples();
+                octreeManager.ClearRaysData();
             }
         
             // Trace a ray for each pixel. 
@@ -374,7 +374,7 @@ namespace _Project.Ray_Caster.Scripts
                     if (!node.occupied)
                     {
                         octreeManager.AddSkippedSample(unityCoords, gridCoords, 0.0f, true);
-                        rcRay.updateSkippedSamplesCounter(1);
+                        //rcRay.updateSkippedSamples(1);
                         float rawSamples = octreeManager.ComputeRayExitDistance(unityCoords, direction, node.nodeBounds) / distanceBetweenSamples;
                         int numSamples = Mathf.Max(0, Mathf.RoundToInt(rawSamples - 1e-4f) - 1);
                         while (numSamples > 0)
@@ -384,7 +384,7 @@ namespace _Project.Ray_Caster.Scripts
                             unityCoords = hitInfo.Entry + (deltaPerSample * i);
                             gridCoords = unityCoordsToGridCoords(unityCoords, voxelGrid);
                             octreeManager.AddSkippedSample(unityCoords, gridCoords, 0.0f, false);
-                            rcRay.updateSkippedSamplesCounter(1);
+                            //rcRay.updateSkippedSamples(1);
                         }
                     }
                     else

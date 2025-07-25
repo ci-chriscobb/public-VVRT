@@ -3,35 +3,56 @@ using System.Collections.Generic;
 using UnityEngine;
 using _Project.Ray_Caster.Scripts.Voxel_Grid;
 using _Project.Ray_Caster.Scripts.RC_Ray;
-using System.IO;
-using System.Text;
-using TMPro;
-using System;
 
 namespace _Project.Ray_Caster.Scripts.Utility
 {
     public class OctreeRoot2
     {
+        /// <summary>
+        /// Root node of the octree
+        /// </summary>
         public OctreeNode2 rootNode;
 
+        /// <summary>
+        /// AABB of the octree
+        /// </summary>
         private Bounds bounds;
 
+        /// <summary>
+        /// List of occupied nodes, used for quick drawing of the nodes
+        /// </summary>
         public List<OctreeNode2> occupiedNodes = new List<OctreeNode2>();
 
+        /// <summary>
+        /// List of skippable nodes, used for quick drawing of the nodes
+        /// </summary>
         public List<OctreeNode2> skippableNodes = new List<OctreeNode2>();
 
+        /// <summary>
+        /// Minimum corner of the AABB
+        /// </summary>
         private Vector3 octreeMin;
+
+        /// <summary>
+        /// Maximum corner of the AABB
+        /// </summary>
         private Vector3 octreeMax;
+
+        // Size of the voxelGrid
         private int sizeX;
         private int sizeY;
         private int sizeZ;
+
+        // Step size between individual voxels
         private float stepX;
         private float stepY;
         private float stepZ;
+
+        // Used for transfer function
         private LinearInterpolation linearInterpolation = new LinearInterpolation();
         private RCRay.ColorTableEntry[] colorTable;
         
-        public OctreeRoot2(GameObject obj, int maxDepth, Bounds AABB, VoxelGrid voxelGrid)
+        public OctreeRoot2(GameObject obj, int maxDepth, Bounds AABB)
         {
             // Get the axis aligned bounding box from mesh renderer component
             bounds = AABB;
@@ -45,6 +66,10 @@ namespace _Project.Ray_Caster.Scripts.Utility
             rootNode = new OctreeNode2(bounds, maxDepth);
         }
 
+        /// <summary>
+        /// Initialising function for the (non-animated) octree build process
+        /// </summary>
+        /// <param name="voxelGrid"></param>
         public void BuildOctree(VoxelGrid voxelGrid)
         {
             if (rootNode.currentDepth == 0)
@@ -70,11 +95,17 @@ namespace _Project.Ray_Caster.Scripts.Utility
             Build(rootNode, grid, rotation);
         }
 
+        /// <summary>
+        /// Recursive build loop for the (non-animated) octree build process
+        /// </summary>
+        /// <param name="node">Current node</param>
+        /// <param name="grid">Grid of the voxel grid</param>
+        /// <param name="rotation">Rotation of the voxel grid</param>
         private void Build(OctreeNode2 node, double[,,] grid, Quaternion rotation)
         {
             // Check density within this node’s bounds
             bool[] result = new bool[1];
-            CheckOccupancy(node.nodeBounds, grid, rotation,result);
+            CheckOccupancy(node.nodeBounds, grid, rotation, result);
 
             bool occupied = result[0];
 
@@ -103,6 +134,13 @@ namespace _Project.Ray_Caster.Scripts.Utility
             }
         }
 
+        /// <summary>
+        /// Returns whether the node is occupied or skippable by changing the value stored in the last parameter
+        /// </summary>
+        /// <param name="nodeBounds">Bounds of the node whose occupancy we're checking</param>
+        /// <param name="grid">Grid of the voxel grid</param>
+        /// <param name="rotation">Rotation of the voxel grid</param>
+        /// <param name="result">The result of this function</param>
         private void CheckOccupancy(Bounds nodeBounds, double[,,] grid, Quaternion rotation, bool[] result)
         {
             int minX = Mathf.Clamp((int)((nodeBounds.min.x - octreeMin.x) / stepX), 0, sizeX - 1);
@@ -151,9 +189,13 @@ namespace _Project.Ray_Caster.Scripts.Utility
                     }
                 }
             }
-            result[0]=false;
+            result[0] = false;
         }
         
+        /// <summary>
+        /// Initialising function for the (animated) octree build process
+        /// </summary>
+        /// <param name="voxelGrid"></param>
         public IEnumerator BuildOctree2(VoxelGrid voxelGrid)
         {
             if (rootNode.currentDepth == 0)
@@ -179,11 +221,17 @@ namespace _Project.Ray_Caster.Scripts.Utility
             yield return Build2(rootNode, grid, rotation);
         }
 
+        /// <summary>
+        /// Recursive build loop for the (animated) octree build process
+        /// </summary>
+        /// <param name="node">Current node</param>
+        /// <param name="grid">Grid of the voxel grid</param>
+        /// <param name="rotation">Rotation of the voxel grid</param>
         private IEnumerator Build2(OctreeNode2 node, double[,,] grid, Quaternion rotation)
         {
             // Check density within this node’s bounds
             bool[] result = new bool[1];
-            yield return CheckOccupancy2(node.nodeBounds, grid, rotation,result);
+            yield return CheckOccupancy2(node.nodeBounds, grid, rotation, result);
 
             bool occupied = result[0];
 
@@ -212,6 +260,13 @@ namespace _Project.Ray_Caster.Scripts.Utility
             }
         }
 
+        /// <summary>
+        /// Returns whether the node is occupied or skippable by changing the value stored in the last parameter
+        /// </summary>
+        /// <param name="nodeBounds">Bounds of the node whose occupancy we're checking</param>
+        /// <param name="grid">Grid of the voxel grid</param>
+        /// <param name="rotation">Rotation of the voxel grid</param>
+        /// <param name="result">The result of this function</param>
         private IEnumerator CheckOccupancy2(Bounds nodeBounds, double[,,] grid, Quaternion rotation, bool[] result)
         {
             int minX = Mathf.Clamp((int)((nodeBounds.min.x - octreeMin.x) / stepX), 0, sizeX - 1);
@@ -222,11 +277,12 @@ namespace _Project.Ray_Caster.Scripts.Utility
 
             int minZ = Mathf.Clamp((int)((nodeBounds.min.z - octreeMin.z) / stepZ), 0, sizeZ - 1);
             int maxZ = Mathf.Clamp((int)((nodeBounds.max.z - octreeMin.z) / stepZ), 0, sizeZ - 1);
-            
+
             int interval = Mathf.Max(1, (maxZ - minZ + 1) / 4);
+            
             for (int z = minZ; z <= maxZ; z++)
             {
-                if ((z-minZ) % interval == 0)
+                if ((z - minZ) % interval == 0)
                     yield return null;
 
                 for (int y = minY; y <= maxY; y++)
@@ -264,7 +320,7 @@ namespace _Project.Ray_Caster.Scripts.Utility
                     }
                 }
             }
-            result[0]=false;
+            result[0] = false;
             yield break;
         }
     }

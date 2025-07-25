@@ -2,14 +2,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using _Project.Ray_Caster.Scripts.Voxel_Grid;
-using TMPro;
-using _Project.Ray_Caster.Scripts.RC_Ray;
 
 namespace _Project.Ray_Caster.Scripts.Utility
 {
 
     /// <summary>
-    /// An Octree component for an object who has MeshFilter and MeshRenderer components.
+    /// An Octree component for a VoxelGrid who has MeshFilter and MeshRenderer components.
     /// MonoBehaviour enabled in order to draw it in the scene
     /// </summary>
     public class Octree2 : MonoBehaviour
@@ -25,33 +23,54 @@ namespace _Project.Ray_Caster.Scripts.Utility
         /// </summary>
         public int maxDepth = 0;
 
+        /// <summary>
+        /// Voxel grid of this octree
+        /// </summary>
         public VoxelGrid voxelGrid;
 
+        /// <summary>
+        /// AABB of the voxel grid
+        /// </summary>
         private Bounds AABB;
 
+        /// <summary>
+        /// OctreeRoot2 of the previously built Octree
+        /// </summary>
         private OctreeRoot2 previousOctreeRoot;
 
-        /// <summary>
-        /// Boolean flag for drawing or hiding the Octree from UI
-        /// </summary>
+        // Boolean flags used for for drawing the Octree and its structures, updated by OctreeManager with values from UI
         public bool drawOctree = true;
-
         public bool drawOccupiedNodes = false;
-
         public bool drawSkippableNodes = false;
         public bool drawTraversedOctants = false;
         public bool highlightTraversedOctants = false;
-        public bool builtOctree = false;
-        public bool buildingOctree = false;
-        public bool animateOctreeBuild = true;
+
+        // Colours of the Octree and its structures, updated by OctreeManager with values from UI
         public Color colourOctree = Color.white;
         public Color colourOccupied = Color.magenta;
         public Color colourSkippable = Color.cyan;
         public Color colourHighlight = new Color(1f, 0.4f, 0f);
+
+        // Boolean flags used to manage the building process, updated by OctreeManager
+        public bool animateOctreeBuild = true;
         public bool update = false;
         public bool reset = false;
         public bool stopUpdate = false;
+
+        /// <summary>
+        /// Stores the update Coroutine to allow halting mid-process
+        /// </summary>
         private Coroutine updateCoroutine = null;
+
+        /// <summary>
+        /// Boolean flag which returns whether the octree is currently being built or not
+        /// </summary>
+        public bool buildingOctree = false;
+
+        /// <summary>
+        /// Boolean flag which returns whether the octree has been built or not
+        /// </summary>
+        public bool builtOctree = false;
 
         void Start()
         {
@@ -61,7 +80,7 @@ namespace _Project.Ray_Caster.Scripts.Utility
             AABB.Expand(0.001f);
 
             // Initalize the AABB and draw
-            octreeRoot = new OctreeRoot2(this.gameObject, 0, AABB, voxelGrid);
+            octreeRoot = new OctreeRoot2(this.gameObject, 0, AABB);
             previousOctreeRoot = octreeRoot;
             octreeRoot.rootNode.occupied = true;
             DrawOctree(octreeRoot.rootNode);
@@ -155,7 +174,7 @@ namespace _Project.Ray_Caster.Scripts.Utility
 
             builtOctree = false; buildingOctree = true;
             yield return null;
-            octreeRoot = new OctreeRoot2(gameObject, depth, AABB, voxelGrid);
+            octreeRoot = new OctreeRoot2(gameObject, depth, AABB);
             yield return null;
 
             if (animateOctreeBuild)
@@ -179,10 +198,14 @@ namespace _Project.Ray_Caster.Scripts.Utility
         }
 
         /// <summary>
-        /// Recursively draws an Octree given any node (root or any child)
-        /// When the root node is passed, it will draw the whole Octree
+        /// Recursively draws an Octree given any node (root or any child).
+        /// When the root node is passed, it will draw the whole Octree.
+        /// To draw highlghts two calls need to be made:
+        /// first a call with highlight=false to draw the octree,
+        /// then a call with highlight=true to draw strictly the highlights.
         /// </summary>
         /// <param name="node">Node of the octree, starts with root node</param>
+        /// <param name="highlight">Whether we draw the octree(false), or strictly it's highlighted nodes(true)</param>
         public void DrawOctree(OctreeNode2 node, bool highlight=false)
         {
             // Draw the current nodes Bounds using Popcron Gizmos package
@@ -217,17 +240,20 @@ namespace _Project.Ray_Caster.Scripts.Utility
                 Popcron.Gizmos.Bounds(node.nodeBounds, colourOctree);
             }
 
-            // Recursively call Draw() on children
-                if (node.children != null)
+            // Recursively call DrawOctree() on children
+            if (node.children != null)
+            {
+                for (int i = 0; i < 8; i++)
                 {
-                    for (int i = 0; i < 8; i++)
-                    {
-                        if (node.children[i] != null)
-                            DrawOctree(node.children[i], highlight);
-                    }
+                    if (node.children[i] != null)
+                        DrawOctree(node.children[i], highlight);
                 }
+            }
         }
 
+        /// <summary>
+        /// Loads the previously built octree
+        /// </summary>
         public void LoadPrevious()
         {
             OctreeRoot2 temp = octreeRoot;

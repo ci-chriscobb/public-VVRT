@@ -15,25 +15,29 @@ namespace _Project.Ray_Caster.Scripts.Utility
         /// </summary>
         public int currentDepth;
 
-        
         /// <summary>
         /// Bounds of current node
         /// </summary>
         public Bounds nodeBounds;
 
-        
         /// <summary>
         /// Bounds array of the (potential) children of this node
         /// </summary>
         public Bounds[] childBounds;
 
         /// <summary>
-        /// Octree Node array for he children nodes of this node 
+        /// Octree Node array for the children nodes of this node 
         /// </summary>
         public OctreeNode2[] children = null;
 
+        /// <summary>
+        /// Whether the node is occupied(true) or skippable(false), by default it's skippable
+        /// </summary>
         public bool occupied = false;
 
+        /// <summary>
+        /// Whether the node should be highlighted when drawing the octree
+        /// </summary>
         public bool highlight = true;
 
         public OctreeNode2(Bounds b, int depth)
@@ -54,7 +58,6 @@ namespace _Project.Ray_Caster.Scripts.Utility
             childBounds[5] = new Bounds(nodeBounds.center + new Vector3(quarter, -quarter, -quarter), childSize);
             childBounds[6] = new Bounds(nodeBounds.center + new Vector3(-quarter, -quarter, quarter), childSize);
             childBounds[7] = new Bounds(nodeBounds.center + new Vector3(-quarter, -quarter, -quarter), childSize);
-
         }
     }
 }

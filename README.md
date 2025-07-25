@@ -1,8 +1,21 @@
 # Virtual Volume Ray Caster
-The Virtual Ray Tracer (VRT) is an educational tool to provide users with an interactive environment for understanding ray tracing concepts. Extending VRT, we created Virtual Volume Raycaster (VVRT), an interactive and gamified application that allows to view and explore the volume raycasting process in real-time. The goal is to help the users—students of Scientific Visualization and the general public—to better understand the steps of volume raycasting and their characteristics, for example the effect of early ray termination. VVRT shows a scene containing a camera casting rays which interact with a volume in the scene. Learners are able to modify and explore different settings, e.g., concerning the transfer function or ray sampling step size. Our educational tool is built with the cross-platform engine Unity, and we make it fully available to be extended and/or adjusted to fit the requirements of courses at other institutions, educational tutorials, or of enthusiasts from the general public. Two user studies demonstrate the effectiveness of VVRT in supporting the understanding and teaching of volume raycasting.
+VVRT (https://github.com/LukkeWal/VVRT, commit - 157ed3f56137dfb88922292a5bd0758dbcdf3420) has been extended with 'Level 16. ADS - Volume Raycasting' during BSc project "Visualisation of Acceleration Data Structures for Volume Raycasting in Virtual Ray Tracer"
+
+Thesis abstract:
+
+"As prevalent as acceleration data structures are within the field of computer graphics,
+there remains a lack of suitable interactive applications developed to facilitate their
+understanding. Virtual Ray Tracer (VRT), with its focus on interactivity and education, has addressed similar gaps since its conception, and, by building on the success
+of its previous extensions, this thesis introduces another.
+
+Through this thesis, VRT is extended to visualize acceleration data structures by highlighting their benefits in the process of volume raycasting. In particular, octrees and
+the space-skipping techniques they facilitate are showcased with an emphasis on interactivity and educational value. Currently, VRT includes 15 tutorial levels covering
+functionalities related to raytracing and volume raycasting. In this work, VRT is expanded with a new tutorial level that demonstrates octrees, their building process, and
+the empty space skipping they enable within volume raycasting. The resulting extension aids in the education of students, as well as interested members of the general
+public."
 
 ## Download
-To try out a ready version of the VVRT download the zip folder with [this dropbox link](https://www.dropbox.com/scl/fo/1manjxd07j5n2zjqg18ld/AMEdYlu-3ltPDNdRuyGZD6c?rlkey=a19gma37iuq2a3o3jhl0akpyo&st=vnu13trr&dl=0) which contians a build version for Windows. Extract the zip folder, open it and launch `VVRTBuild > Virtual Ray Tracer`. The Virtual Volume Ray Caster can be found in the levels menu under the title "Ray Casting"
+To try out a ready version of the VVRT, download the zip folder with [this dropbox link](https://www.dropbox.com/scl/fi/hwhk81eizhl7hnobqrh7m/VVRTBuild.zip?rlkey=wmn8j91fmpgfk30cylborq807&st=f1djuqp3&dl=0) which contians a build version for Windows. Extract the zip folder, open it and launch `VVRTBuild > Virtual Ray Tracer.exe`. The latest extension can be found in the Levels menu under the title "ADS - Volume Raycasting"
 
 ## Building the Application
 

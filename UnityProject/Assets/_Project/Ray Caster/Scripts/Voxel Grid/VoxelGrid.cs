@@ -427,7 +427,7 @@ namespace _Project.Ray_Caster.Scripts.Voxel_Grid
         }
 
         /// <summary>
-        /// Used by the octree to compute opacity at a point in the grid
+        /// Used by the octree to compute opacity for a specific voxel in the grid
         /// </summary>
         /// <returns>rayCasterManager.ColorLookupTable, empty colour table if rayCasterManager not loaded</returns>
         public RCRay.ColorTableEntry[] GetColorTable()

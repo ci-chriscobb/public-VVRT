@@ -75,7 +75,7 @@ namespace _Project.Ray_Caster.Scripts.RC_Ray
 
         public float DistanceBetweenSamples;
 
-        private int skippedSamplesCounter = 0;
+        //private int skippedSamplesCounter = 0;
 
         /// <summary>
         /// Used for the <see cref="RCRay.ColorLookupTable">
@@ -192,15 +192,13 @@ namespace _Project.Ray_Caster.Scripts.RC_Ray
         {
             Color lastColor = Samples.Count > 0 ? Samples[^1].CompositedSampleColor : Color.clear;
             // If the final composited color does not have an alpha value of 1 we "fill it up" with black background color
-            Color finalColor;
+            Color finalColor = lastColor;
+            /*
             if (ColorCompositingMethod == Average)
             {
                 finalColor = transferFunction(totalDensity / (Samples.Count + skippedSamplesCounter - 1));
             }
-            else
-            {
-                finalColor = lastColor;
-            }
+            */
             Color background = new Color(0.68f, 0.68f, 0.68f);
             if (lastColor.a < 1)
             {
@@ -304,7 +302,8 @@ namespace _Project.Ray_Caster.Scripts.RC_Ray
         private Color Average(Sample previousSample, Sample newSample, int numberOfRecordedSamples)
         {
             totalDensity += newSample.RecordedDensity;
-            return transferFunction(totalDensity / (numberOfRecordedSamples + skippedSamplesCounter));
+            //return transferFunction(totalDensity / (numberOfRecordedSamples + skippedSamplesCounter));
+            return transferFunction(totalDensity / numberOfRecordedSamples);
         }
 
         /// <summary>
@@ -343,11 +342,18 @@ namespace _Project.Ray_Caster.Scripts.RC_Ray
             return linearInterpolation.MonoLinearInterpolation((float)density, ColorLookupTable);
         }
         
-        // Function used for average compositing when empty space skipping is enabled
-        public void updateSkippedSamplesCounter(int count, double density = 0)
+        /* // Function used for compositing method Average when empty space skipping is enabled
+
+        /// <summary>
+        /// Updates samples data based on skipped samples
+        /// </summary>
+        /// <param name="count">Number of skipped samples</param>
+        /// <param name="density">Sum of skipped samples' density</param>
+        public void updateSkippedSamples(int count, double density = 0)
         {
             totalDensity += density;
             skippedSamplesCounter += count;
         }
+        */
     }
 }

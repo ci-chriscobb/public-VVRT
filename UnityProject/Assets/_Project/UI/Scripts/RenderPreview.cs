@@ -208,6 +208,11 @@ namespace _Project.UI.Scripts
         }
 
         // Functions used in OctreeManager
+
+        /// <summary>
+        /// Returns the coordinates of a selected pixel
+        /// </summary>
+        /// <returns>(x,y) coordinates of a selected pixel, (-1,-1) if no pixel is selected</returns>
         public Vector2Int GetSelectedPixel()
         {
             if (selectImage.enabled)
@@ -217,6 +222,10 @@ namespace _Project.UI.Scripts
             return new Vector2Int(-1, -1);
         }
 
+        /// <summary>
+        /// Returns camera pixel width
+        /// </summary>
+        /// <returns>int</returns>
         public int GetWidth()
         {
             return rayTracerImage.Width;

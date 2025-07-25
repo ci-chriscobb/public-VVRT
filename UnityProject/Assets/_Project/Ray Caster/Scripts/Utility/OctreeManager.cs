@@ -5,7 +5,6 @@ using UnityEngine;
 using _Project.Ray_Caster.Scripts.Voxel_Grid;
 using TMPro;
 using _Project.Ray_Caster.Scripts.RC_Ray;
-using _Project.UI.Scripts.Control_Panel;
 using _Project.UI.Scripts;
 using UnityEngine.UI;
 
@@ -13,20 +12,12 @@ namespace _Project.Ray_Caster.Scripts.Utility
 {
 
     /// <summary>
-    /// An Octree component for an object who has MeshFilter and MeshRenderer components.
-    /// MonoBehaviour enabled in order to draw it in the scene
+    /// An OctreeManager for the Octree component of a VoxelGrid.
+    /// MonoBehaviour enabled in order to update the octree
     /// </summary>
     public class OctreeManager : MonoBehaviour
     {
-        /// <summary>
-        /// Max subdivision depth of this Octree
-        /// 3-4 works well overall
-        /// </summary>
-        private int maxDepth;
         
-        /// <summary>
-        /// Boolean flag for drawing or hiding the Octree from UI
-        /// </summary>
         [SerializeField] private TextMeshProUGUI octreeAccelerationStatus;
         [SerializeField] private TextMeshProUGUI totalSamplesStatus;
         [SerializeField] private TextMeshProUGUI retainedSamplesStatus;
@@ -42,32 +33,47 @@ namespace _Project.Ray_Caster.Scripts.Utility
         [SerializeField] private TextMeshProUGUI buildOctreeText;
         [SerializeField] private GameObject voxelGridObj;
         [SerializeField] private GameObject RenderPreviewObj;
-        [SerializeField] private GameObject ADSPropertiesObj;
-        private VoxelGrid voxelGrid;
         private RenderPreview renderPreview;
+
+        /// <summary>
+        /// The octree we're managing
+        /// </summary>
         private Octree2 octree;
 
-        // UI elements
+        /// <summary>
+        /// The voxel grid of the managed octree
+        /// </summary>
+        private VoxelGrid voxelGrid;
+        
+        // Octree parameters updated from the UI
+        private int maxDepth;
+        private bool animateOctreeBuild;
         private bool drawOctree;
-        private bool emptySpaceSkip;
         private bool drawOccupiedNodes;
         private bool drawSkippableNodes;
         private bool drawTraversedOctants;
         private bool highlightTraversedOctants;
-        private bool showSkippedSamples;
-        private bool animateOctreeBuild;
-        private bool automaticBuild;
         private Color colourOctree;
         private Color colourOccupied;
         private Color colourSkippable;
+        private Color colourHighlight;
+
+        // OctreeManager parameters used for updates and empty space skipping, updated from the UI
+        private bool emptySpaceSkip;
+        private bool showSkippedSamples;
         private Color colourSkippedSample;
         private Color colourSkippedMarker;
-        private Color colourHighlight;
-        // Samples
-        private List<OctreeNode2> traversedNodesTemp = new List<OctreeNode2>();
-        private List<Sample> skippedSamplesTemp = new List<Sample>();
-        private int retainedSamplesTemp = 0;
-        private List<RayData> rayData = new List<RayData>();
+        private bool automaticBuild;
+
+        // Parameters used to to update the octree
+        private int update = 0;
+        private int updateType = 0;
+        private Coroutine updateCoroutine = null;
+        private float quickUpdate = 1f;
+        private float normalUpdate = 3f;
+        private float updateDelay;
+
+        // Parameters used to update, store, and display data of specific rays
         private class RayData
         {
             public List<Sample> skippedSamples;
@@ -80,15 +86,12 @@ namespace _Project.Ray_Caster.Scripts.Utility
                 traversedNodes = traversedNodesTemp;
             }
         }
-        private Vector2Int selectedPixel = new Vector2Int(-1, -1);
 
-        // Updates
-        private int update = 0;
-        private int updateType = 0;
-        private Coroutine updateCoroutine = null;
-        private float quickUpdate = 1f;
-        private float normalUpdate = 3f;
-        private float updateDelay;
+        private List<RayData> rayData = new List<RayData>();
+        private List<OctreeNode2> traversedNodesTemp = new List<OctreeNode2>();
+        private List<Sample> skippedSamplesTemp = new List<Sample>();
+        private int retainedSamplesTemp = 0;
+        private Vector2Int selectedPixel = new Vector2Int(-1, -1);
 
         void Start()
         {
@@ -315,7 +318,6 @@ namespace _Project.Ray_Caster.Scripts.Utility
                 }
             }
 
-
             octree.drawOctree = drawOctree;
             octree.drawOccupiedNodes = drawOccupiedNodes;
             octree.drawSkippableNodes = drawSkippableNodes;
@@ -350,13 +352,18 @@ namespace _Project.Ray_Caster.Scripts.Utility
             }
         }
 
+        /// <summary>
+        /// Delays the call to update the octree based on updateDelay
+        /// </summary>
+        /// <param name="type">The type of update we perform</param>
+        /// <returns></returns>
         private IEnumerator UpdateOctree(int type)
         {
 
             float inactivityTime = Time.time;
             while (Time.time - inactivityTime < updateDelay)
             {
-                if (update !=0)
+                if (update != 0)
                 {
                     inactivityTime = Time.time;
                     update = 0;
@@ -367,11 +374,15 @@ namespace _Project.Ray_Caster.Scripts.Utility
 
             updateCoroutine = null;
             updateType = 0;
-            ClearSamples();
+            ClearRaysData();
 
             SafeUpdate(type);
         }
 
+        /// <summary>
+        /// Notifies the octree to update based on the type, 1=update, 2=reset to AABB.
+        /// </summary>
+        /// <param name="type">The type of update we perform</param>
         public void SafeUpdate(int type)
         {
             if (SafeUpdateCheck(1))
@@ -399,6 +410,13 @@ namespace _Project.Ray_Caster.Scripts.Utility
             }
         }
 
+        /// <summary>
+        /// Checks if it's not safe to update the octree based on it's parameter.
+        /// If type = 1 we check if the octree is currently being built.
+        /// Otherwise we check if the octree has not been built yet.
+        /// </summary>
+        /// <param name="type">Which type of check we perform</param>
+        /// <returns>true if it's not safe to update, false otherwise</returns>
         public bool SafeUpdateCheck(int type)
         {
             if (type == 1)
@@ -408,18 +426,18 @@ namespace _Project.Ray_Caster.Scripts.Utility
         }
 
         /// <summary>
-        /// Resets sample counter & objects, updates the rays
+        /// Resets data stored for rays and updates the rays
         /// </summary>
         public void UpdateSamples()
         {
-            ClearSamples();
+            ClearRaysData();
             octree.voxelGrid.UpdateRays();
         }
 
         /// <summary>
-        /// Clear sample properties
+        /// Clears data stored for all rays
         /// </summary>
-        public void ClearSamples()
+        public void ClearRaysData()
         {
             retainedSamplesTemp = 0;
             skippedSamplesTemp.Clear();
@@ -433,10 +451,10 @@ namespace _Project.Ray_Caster.Scripts.Utility
             rayData.Clear();
         }
 
-        // Functions below are used to update sample related properties from UnityRayCaster
+        // Functions below are used to update the information of specific rays from the UnityRayCaster
 
         /// <summary>
-        /// Updates the samples' counters 
+        /// Updates the retained samples counter for a specific ray
         /// </summary>
         /// <param name="skipped">Counter of skipped samples</param>
         /// <param name="retained">Counter of retained samples</param>
@@ -445,15 +463,6 @@ namespace _Project.Ray_Caster.Scripts.Utility
             if (SafeUpdateCheck(0)) return;
 
             retainedSamplesTemp += retained;
-        }
-
-        public void UpdateRayData()
-        {
-            rayData.Add(new RayData(new List<Sample>(skippedSamplesTemp), retainedSamplesTemp, new List<OctreeNode2>(traversedNodesTemp)));
-
-            retainedSamplesTemp = 0;
-            skippedSamplesTemp.Clear();
-            traversedNodesTemp.Clear();
         }
 
         /// <summary>
@@ -473,9 +482,25 @@ namespace _Project.Ray_Caster.Scripts.Utility
             skippedSamplesTemp.Add(new Sample(unityCoords, gridCoords, density, sampleColour));
         }
 
+        /// <summary>
+        /// Adds a traversed node to our list
+        /// </summary>
+        /// <param name="node">The traversed node</param>
         public void AddTraversedNode(OctreeNode2 node)
         {
             traversedNodesTemp.Add(node);
+        }
+
+        /// <summary>
+        /// Updates the information of a specific ray based on our lists
+        /// </summary>
+        public void UpdateRayData()
+        {
+            rayData.Add(new RayData(new List<Sample>(skippedSamplesTemp), retainedSamplesTemp, new List<OctreeNode2>(traversedNodesTemp)));
+
+            retainedSamplesTemp = 0;
+            skippedSamplesTemp.Clear();
+            traversedNodesTemp.Clear();
         }
 
         /// <summary>
@@ -557,6 +582,9 @@ namespace _Project.Ray_Caster.Scripts.Utility
         // Functions below are used to update the Octree and it's properties from the UI
         // we use these instead of serialised fields to add automated updates after x seconds of inactivity
 
+        /// <summary>
+        /// Used to update the octree after the voxel grid is changed from the UI
+        /// </summary>
         public void SelectVoxelGridDropDown()
         {
             if (updateCoroutine != null)
@@ -570,11 +598,17 @@ namespace _Project.Ray_Caster.Scripts.Utility
             updateDelay = quickUpdate;
         }
 
+        /// <summary>
+        /// Used to update the selected pixel from the UI
+        /// </summary>
         public void SelectRenderPreview()
         {
             selectedPixel = renderPreview.GetSelectedPixel();
         }
 
+        /// <summary>
+        /// Used from the UI to change octree to AABB when the transfer function's colourTable is changed
+        /// </summary>
         public void ChangeColourTable()
         {
             SafeUpdate(2);
@@ -611,7 +645,7 @@ namespace _Project.Ray_Caster.Scripts.Utility
         }
 
         /// <summary>
-        /// Used to load the previous non-AABB octree from the UI
+        /// Used to load the previous octree from the UI
         /// </summary>
         public void LoadPreviousButton()
         {
@@ -627,6 +661,9 @@ namespace _Project.Ray_Caster.Scripts.Utility
             UpdateSamples();
         }
 
+        /// <summary>
+        /// Used to stop the animated building process from the UI
+        /// </summary>
         public void StopBuildButton()
         {
             if (updateCoroutine != null)
@@ -636,7 +673,7 @@ namespace _Project.Ray_Caster.Scripts.Utility
             update = 0;
             updateType = 0;
 
-            octree.stopUpdate=true;
+            octree.stopUpdate = true;
         }
 
         /// <summary>
@@ -652,7 +689,7 @@ namespace _Project.Ray_Caster.Scripts.Utility
         }
 
         /// <summary>
-        /// Used to toggle if we automatically build the octree after based on updateDelay
+        /// Used to toggle if we automatically build the octree after changes from the UI
         /// </summary>
         public void AutomaticBuildToggle()
         {
@@ -714,12 +751,18 @@ namespace _Project.Ray_Caster.Scripts.Utility
             update = updateType;
         }
 
+        /// <summary>
+        /// Used to toggle if we draw nodes traversed by the ray from the UI
+        /// </summary>
         public void DrawTraversedOctantsToggle()
         {
             drawTraversedOctants = !drawTraversedOctants;
             update = updateType;
         }
 
+        /// <summary>
+        /// Used to toggle if we highlight nodes traversed by the ray from the UI
+        /// </summary>
         public void HighlightTraversedOctantsToggle()
         {
             highlightTraversedOctants = !highlightTraversedOctants;
@@ -736,6 +779,10 @@ namespace _Project.Ray_Caster.Scripts.Utility
             update = 1;
         }
 
+        /// <summary>
+        /// Used to change the colour of highlights from the UI
+        /// </summary>
+        /// <param name="colour"></param>
         public void SetColourHighlight(Color colour)
         {
             colourHighlight = colour;
